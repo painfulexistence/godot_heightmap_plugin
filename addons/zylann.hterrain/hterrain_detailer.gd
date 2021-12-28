@@ -4,13 +4,9 @@ const Logger = preload("./util/logger.gd")
 
 
 const CHUNK_SIZE = 32
-const AABBS_CACHE_SIZE = 1024
 
 var _terrain = null
 var _detail_layers := []
-
-# Vector3 => AABB
-var _cached_aabbs := {}
 
 var _logger := Logger.get_for(self)
 
@@ -39,8 +35,6 @@ func remove_map(index: int):
 
 func set_transform(terrain_transform: Transform):
 	update_materials()
-	# Clear cached aabbs because the transform changed
-	_cached_aabbs.clear()
 		
 func process(delta: float, viewer_pos: Vector3):
 	if _terrain == null:
@@ -105,29 +99,17 @@ func _cb_chunk_aabb(lpos: Vector3) -> AABB:
 # Gets local-space AABB of a detail chunk.
 # This only apply map_scale in Y, because details are not affected by X and Z map scale.
 func _get_chunk_aabb(lpos: Vector3) -> AABB:
-	var aabb = null
-
-	if _cached_aabbs.has(lpos):
-		aabb = _cached_aabbs[lpos]
-	else:
-		var terrain_scale = _terrain.map_scale
-		var terrain_data = _terrain.get_data()
-		var origin_cells_x := int(lpos.x / terrain_scale.x)
-		var origin_cells_z := int(lpos.z / terrain_scale.z)
-		var size_cells_x := int(CHUNK_SIZE / terrain_scale.x)
-		var size_cells_z := int(CHUNK_SIZE / terrain_scale.z)
+	var terrain_scale = _terrain.map_scale
+	var terrain_data = _terrain.get_data()
+	var origin_cells_x := int(lpos.x / terrain_scale.x)
+	var origin_cells_z := int(lpos.z / terrain_scale.z)
+	var size_cells_x := int(CHUNK_SIZE / terrain_scale.x)
+	var size_cells_z := int(CHUNK_SIZE / terrain_scale.z)
+	
+	var aabb = terrain_data.get_region_aabb(
+		origin_cells_x, origin_cells_z, size_cells_x, size_cells_z)
 		
-		aabb = terrain_data.get_region_aabb(
-			origin_cells_x, origin_cells_z, size_cells_x, size_cells_z)
-			
-		aabb.position = Vector3(lpos.x, lpos.y + aabb.position.y * terrain_scale.y, lpos.z)
-		aabb.size = Vector3(CHUNK_SIZE, aabb.size.y * terrain_scale.y, CHUNK_SIZE)
-		_cache_chunk_aabb(lpos, aabb)
+	aabb.position = Vector3(lpos.x, lpos.y + aabb.position.y * terrain_scale.y, lpos.z)
+	aabb.size = Vector3(CHUNK_SIZE, aabb.size.y * terrain_scale.y, CHUNK_SIZE)
 	
 	return aabb
-
-func _cache_chunk_aabb(lpos: Vector3, aabb: AABB):
-	if _cached_aabbs.size() >= AABBS_CACHE_SIZE:
-		_cached_aabbs.erase(_cached_aabbs.keys()[0])
-	
-	_cached_aabbs[lpos] = aabb
