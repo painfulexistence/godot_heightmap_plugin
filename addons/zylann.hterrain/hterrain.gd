@@ -11,6 +11,7 @@ const HTerrainChunkDebug = preload("./hterrain_chunk_debug.gd")
 const Util = preload("./util/util.gd")
 const HTerrainCollider = preload("./hterrain_collider.gd")
 const HTerrainTextureSet = preload("./hterrain_texture_set.gd")
+const NativeFactory = preload("./native/factory.gd")
 const Logger = preload("./util/logger.gd")
 
 const SHADER_CLASSIC4 = "Classic4"
@@ -172,7 +173,7 @@ var _data: HTerrainData = null
 
 var _mesher := Mesher.new()
 var _lodder := QuadTreeLod.new()
-var _detailer := Detailer.new()
+var _detailer = NativeFactory.get_terrain_detailer()
 var _viewer_pos_world := Vector3()
 
 # [lod][z][x] -> chunk
